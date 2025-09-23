@@ -28,7 +28,7 @@ network.eval()
 with open("dst-lang-vacab2idx.pkl","rb") as file:
     Vd=pickle.load(file)
 
-with open("dst-lang-idx2vocab.pkl","wb") as file:
+with open("dst-lang-idx2vocab.pkl","rb") as file:
     hindi_idx2vocab=pickle.load(file)
 
 def generate_translation(eng_sentence):
