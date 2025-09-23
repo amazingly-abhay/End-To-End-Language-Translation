@@ -2,7 +2,34 @@ from transformers import AutoTokenizer
 src_sent_tokenizer=AutoTokenizer.from_pretrained("google-T5/T5-base")
 import torch
 import torch.nn.functional as F
-from model import network,hindi_idx2vocab,Vd,Nd,Seq2SeqEncDec
+from model import Seq2SeqEncDec
+import pickle,requests
+from fastapi import FastAPI,HTTPException
+from pydantic import BaseModel
+
+Vs=32100
+Vd=7072
+Nd=68
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
+network = Seq2SeqEncDec(Vs,Vd,128).to(device)
+
+if torch.cuda.is_available():
+    network.load_state_dict(torch.load("model.pth",map_location="cuda:0"))
+else:
+    network.load_state_dict(torch.load("model.pth",map_location=torch.device("cpu")))
+
+network.eval()
+
+with open("dst-lang-vacab2idx.pkl","rb") as file:
+    Vd=pickle.load(file)
+
+with open("dst-lang-idx2vocab.pkl","wb") as file:
+    hindi_idx2vocab=pickle.load(file)
 
 def generate_translation(eng_sentence):
 
@@ -58,3 +85,23 @@ def generate_translation(eng_sentence):
         hindi_translated_sentence += " " + hindi_idx2vocab[generated_token_id.item()]
 
     return hindi_translated_sentence
+
+
+
+class TranslateRequest(BaseModel):
+    text:str
+
+
+app=FastAPI()
+
+@app.post("/translate/")
+def translate(request: TranslateRequest):
+    if not request.text:
+        raise HTTPException(status_code=400,detail="Text missing")
+    try:
+        hindi_translated_sentence=generate_translation(request.text)
+        return {"hindi_translation":hindi_translated_sentence}
+
+    except Exception as e:
+        raise HTTPException(status_code=500,detail=str(e))
+    

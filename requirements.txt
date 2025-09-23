@@ -3,4 +3,6 @@ numpy
 transformers
 torch --index-url https://download.pytorch.org/whl/cpu
 indic-nlp-library
-
+fastapi
+uvicorn
+pydantic
